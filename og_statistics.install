@@ -1,0 +1,80 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Installs the og_statistics module.
+ */
+
+/**
+ * Implemenation of hook_install().
+ */
+function og_statistics_install() {
+  drupal_install_schema('og_statistics');
+}
+
+/**
+ * Implemenation of hook_schema().
+ */
+function og_statistics_schema() {
+  $schema['og_statistics'] = array(
+    'description' => 'Saves some statistics foreach group',
+    'fields'          => array(
+      'nid'             => array(
+        'description'     => "The groups's {node}.nid.",
+        'type'            => 'int',
+        'size'            => 'normal',
+        'not null'        => TRUE,
+      ),
+      'members_count' => array(
+        'description' => 'How many members has a group',
+        'type' => 'int',
+        'size' => 'normal',
+        'not null' => TRUE,
+      ),
+      'posts_count' => array(
+        'description' => 'How many posts has a group',
+        'type' => 'int',
+        'size' => 'normal',
+        'not null' => TRUE,
+      ),
+      'comments_count' => array(
+        'description' => 'How many comments has a group',
+        'type' => 'int',
+        'size' => 'normal',
+        'not null' => TRUE,
+      ),
+      'last_node_timestamp' => array(
+        'description'     => 'Last Time when a in the group was created.',
+        'type'            => 'int',
+        'size'            => 'normal',
+        'not null'        => FALSE,
+        'default'         => 0,
+      ),
+      'last_comment_timestamp' => array(
+        'description'     => 'Last Time when a comment in the group was created.',
+        'type'            => 'int',
+        'size'            => 'normal',
+        'not null'        => FALSE,
+        'default'         => 0,
+      ),
+      'last_member_timestamp' => array(
+        'description'     => 'Last Time when a user joins a group.',
+        'type'            => 'int',
+        'size'            => 'normal',
+        'not null'        => FALSE,
+        'default'         => 0,
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implemenation of hook_uninstall().
+ */
+function og_statistics_uninstall() {
+  drupal_uninstall_schema('og_statistics');
+}

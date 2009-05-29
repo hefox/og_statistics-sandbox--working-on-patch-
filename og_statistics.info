@@ -1,0 +1,7 @@
+; $Id;
+name = Organic groups statistics
+description = "Enable statistics for organic groups."
+package = "Organic groups"
+dependencies[] = og
+dependencies[] = og_views
+core = 6.x

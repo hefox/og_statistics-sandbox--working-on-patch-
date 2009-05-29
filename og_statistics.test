@@ -1,0 +1,87 @@
+<?php
+// $Id$
+
+/**
+ * Test file for og_statitics.
+ */
+
+require_once drupal_get_path('module', 'og') .'/tests/og_testcase.php';
+
+class OgStatisticsTestCase extends OgTestCase {
+  function getInfo() {
+    return array(
+      'name' => t('Organic groups statistics'),
+      'description' => t('tests statistics of og_statistics module'),
+      'group' => t('Organic groups'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('node', 'user', 'comment', 'views', 'og', 'og_views', 'og_statistics', 'og_access');
+
+    // Create a user with admin permissions.
+    $web_admin = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'access administration pages', 'administer site configuration', 'administer organic groups'));
+    $this->drupalLogin($web_admin);
+  }
+
+  function TestOgStatisticsWritePureRecord() {
+    // Create a group node content type.
+    $og_group_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
+
+    // Create a group post content type.
+    $og_post_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_post_type->name, 'group_post_standard');
+
+    // Rebuild the menu so the new content types will appear in the menu.
+    menu_rebuild();
+
+    // Create a group node.
+    $gid = $this->addOgGroup($og_group_type->name);
+
+    og_statistics_write_pure_record($gid);
+
+    // get the record of the group
+    $stat = og_statistics_load($gid);
+    unset($stat['nid']);
+    $members = 
+
+    $empty = FALSE;
+    $this->assertFalse($empty, print_r($stat, TRUE));
+    foreach ($stat as $key => $item) {
+      $this->assertFalse($empty, $item);
+      $this->assertFalse($empty, $empty);
+      $empty = $empty || $item == TRUE;
+      $this->assertFalse($empty, $empty);
+      $this->assertFalse($empty, '-----------------');
+    }
+    $this->assertFalse($empty, t('All stats should have 0 as item'));
+  }
+
+  function TestOgStatisticsNodeapi() {
+    // Create a group node content type.
+    $og_group_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
+
+    // Create a group post content type.
+    $og_post_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_post_type->name, 'group_post_standard');
+
+    // Rebuild the menu so the new content types will appear in the menu.
+    menu_rebuild();
+
+    // create a test group
+    $gid = $this->addOgGroup($og_group_type->name);
+    $before = og_statistics_load($gid);
+
+    // add a test post
+    $nids[] = $this->addOgPost($og_post_type->name, array($gid));
+    // Rebuild the menu so the new content types will appear in the menu.
+    menu_rebuild();
+    $after = og_statistics_load($gid);
+    $count_one_up = ($after['posts_count'] - $before['posts_count']) == 1;
+
+    $this->assertTrue($count_one_up, t('A node post in a group, counts the counter 1 up'));
+  }
+}
+
