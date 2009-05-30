@@ -1,4 +1,4 @@
-; $Id;
+;$Id;
 name = Organic groups statistics
 description = "Enable statistics for organic groups."
 package = "Organic groups"
