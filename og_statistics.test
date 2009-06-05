@@ -39,8 +39,6 @@ class OgStatisticsTestCase extends OgTestCase {
     // Create a group node.
     $gid = $this->addOgGroup($og_group_type->name);
 
-    og_statistics_write_pure_record($gid);
-
     // get the record of the group
     $stat = og_statistics_load($gid);
     unset($stat['nid']);
@@ -49,11 +47,7 @@ class OgStatisticsTestCase extends OgTestCase {
     $empty = FALSE;
     $this->assertFalse($empty, print_r($stat, TRUE));
     foreach ($stat as $key => $item) {
-      $this->assertFalse($empty, $item);
-      $this->assertFalse($empty, $empty);
       $empty = $empty || $item == TRUE;
-      $this->assertFalse($empty, $empty);
-      $this->assertFalse($empty, '-----------------');
     }
     $this->assertFalse($empty, t('All stats should have 0 as item'));
   }
