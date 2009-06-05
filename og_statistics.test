@@ -3,6 +3,9 @@
 
 /**
  * Test file for og_statitics.
+ *
+ * @TODO Use multiple groups for testing.
+ * @TODO Abstract part of the tests.
  */
 
 require_once drupal_get_path('module', 'og') .'/tests/og_testcase.php';
@@ -52,6 +55,7 @@ class OgStatisticsTestCase extends OgTestCase {
     $this->assertFalse($empty, t('All stats should have 0 as item'));
   }
 
+  // Tests nodeapi statistics.
   function TestOgStatisticsNodeapi() {
     // Create a group node content type.
     $og_group_type = $this->drupalCreateContentType();
@@ -69,13 +73,86 @@ class OgStatisticsTestCase extends OgTestCase {
     $before = og_statistics_load($gid);
 
     // add a test post
-    $nids[] = $this->addOgPost($og_post_type->name, array($gid));
+    $nids[] = $nid = $this->addOgPost($og_post_type->name, array($gid));
+    $node = node_load($nid);
     // Rebuild the menu so the new content types will appear in the menu.
     menu_rebuild();
     $after = og_statistics_load($gid);
     $count_one_up = ($after['posts_count'] - $before['posts_count']) == 1;
 
-    $this->assertTrue($count_one_up, t('A node post in a group, counts the counter 1 up'));
+    $this->assertTrue($count_one_up, 'A node post in a group, counts the counter 1 up');
+    $this->assertEqual($node->created, $after['last_node_timestamp'], 'A node post in a group, sets the last node timestamp');
+
+    // remove the post
+    node_delete($nid);
+    $before = $after;
+    $after = og_statistics_load($gid);
+    $count_down = ($after['posts_count'] - $before['posts_count']) == -1;
+
+    $this->assertTrue($count_down, 'A node poast in a group was deleted, counts the counter 1 down');
+  }
+
+  // Tests comments hooks statistic
+  function TestOgStatisticsComment() {
+    // Create a group node content type.
+    $og_group_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
+
+    // Create a group post content type.
+    $og_post_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_post_type->name, 'group_post_standard');
+
+    // Rebuild the menu so the new content types will appear in the menu.
+    menu_rebuild();
+
+    // create a test group
+    $gid = $this->addOgGroup($og_group_type->name);
+    $before = og_statistics_load($gid);
+
+    // add a test post
+    $nids[] = $nid = $this->addOgPost($og_post_type->name, array($gid));
+
+    // adds some comments
+    $edit = array();
+    $edit['subject'] = $this->randomName(10);
+    $edit['comment'] = $this->randomName(50);
+    $edit['nid'] = $nid;
+    $cid = comment_save($edit);
+    $comment = _comment_load($cid);
+
+    $after = og_statistics_load($gid);
+    $count_up = ($after['comments_count'] - $before['comments_count']) == 1;
+    $this->assertTrue($count_up, 'new comment to one group post, counts up the comment counter');
+    $this->assertEqual($comment->timestamp, $after['last_comment_timestamp'], 'new comment to one group post, counts up the comment counter');
+  }
+
+  function TestOgStatisticsOg() {
+    // Create a group node content type.
+    $og_group_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
+
+    // Create a group post content type.
+    $og_post_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_post_type->name, 'group_post_standard');
+
+    // Rebuild the menu so the new content types will appear in the menu.
+    menu_rebuild();
+
+    // create a test group
+    $gid = $this->addOgGroup($og_group_type->name);
+    $before = og_statistics_load($gid);
+
+    // let one member choine the group
+    $account = $this->drupalCreateUser();
+    $time = time();
+    og_save_subscription($gid, $account->uid, array('created' => $time));
+
+    $after = og_statistics_load($gid);
+
+    $count_up = ($after['members_count'] - $before['members_count']) == 1;
+
+    $this->assertTrue($count_up, 'New subscription to a group adds the counter 1 up');
+    $this->assertEqual($time, $after['last_member_timestamp'], 'New subscription to a group adds the counter 1 up');
   }
 }
 
