@@ -24,9 +24,9 @@ function og_statistics_views_og_statistics() {
       'field' => 'nid',
     ),
   );
-  $data['og_statistics']['count_members'] = array(
+  $data['og_statistics']['members_count'] = array(
     'title' => t('Group Statistic: Members Count'),
-    'real field' => 'count_members',
+    'real field' => 'members_count',
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
@@ -35,9 +35,9 @@ function og_statistics_views_og_statistics() {
       'handler' => 'views_handler_sort',
     ),
   );
-  $data['og_statistics']['count_posts'] = array(
+  $data['og_statistics']['posts_count'] = array(
     'title' => t('Group Statistic: Posts Count'),
-    'real field' => 'count_posts',
+    'real field' => 'posts_count',
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
@@ -46,9 +46,9 @@ function og_statistics_views_og_statistics() {
       'handler' => 'views_handler_sort',
     ),
   );
-  $data['og_statistics']['count_comments'] = array(
+  $data['og_statistics']['comments_count'] = array(
     'title' => t('Group Statistic: Comments Count'),
-    'real field' => 'count_comments',
+    'real field' => 'comments_count',
     'field' => array(
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
