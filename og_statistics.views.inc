@@ -90,6 +90,76 @@ function og_statistics_views_og_statistics() {
       'handler' => 'views_handler_sort_date',
     ),
   );
+
+  // Add relationship to node table for last node posted.
+  $data['og_statistics']['last_node_nid'] = array(
+    'title' => 'Group Statistic: Last Node posted',
+    'help' => 'Create a relationship to for the last node posted',
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'node',
+      'field' => 'nid',
+      'label' => t('node'),
+    ),
+  );
+  // Add relationship to user table for last node posted.
+  $data['og_statistics']['last_node_uid'] = array(
+    'title' => 'Group Statistic: User that created the last node posted',
+    'help' => 'Create a relationship to the user that last posted a node.',
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'field' => 'uid',
+      'label' => t('user'),
+    ),
+  );
+
+  // Add relationship to node table for last comment posted.
+  $data['og_statistics']['last_comment_nid'] = array(
+    'title' => 'Group Statistic: Node the last comment was posted to',
+    'help' => 'Create a relationship to the last comment posted',
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'node',
+      'field' => 'nid',
+      'label' => t('node'),
+    ),
+  );
+  // Add relationship to user table for last comment posted.
+  $data['og_statistics']['last_comment_uid'] = array(
+    'title' => 'Group Statistic: User that posted the last comment',
+    'help' => 'Create a relationship to the user that last posted a comment.',
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'field' => 'uid',
+      'label' => t('user'),
+    ),
+  );
+  // Add relationship to the comment table for the last comment posted.
+  $data['og_statistics']['last_comment_cid'] = array(
+    'title' => 'Group Statistic: Comment last posted',
+    'help' => 'Create a relationship to the last comment posted',
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'comments',
+      'field' => 'cid',
+      'label' => t('comment'),
+    ),
+  );
+
+  // Add relationship to the users table for the last member.
+  $data['og_statistics']['last_member_uid'] = array(
+    'title' => 'Group Statistic: Last member to join',
+    'help' => 'Create a relationship to the last user to join',
+    'relationship' => array(
+      'handler' => 'views_handler_relationship',
+      'base' => 'users',
+      'field' => 'uid',
+      'label' => t('user'),
+    ),
+  );
+  
   return $data;
 }
 

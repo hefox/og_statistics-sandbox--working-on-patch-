@@ -58,7 +58,7 @@ function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
           $node->og_groups = array_unique($node->og_groups);
           foreach ($node->og_groups as $gid) {
             og_statistics_add_node($gid);
-            og_statistics_update_last_node($node->created, $gid);
+            og_statistics_update_last_node($node, $gid);
           }
         }
       }
@@ -86,11 +86,11 @@ function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
           $added_gid = array_diff($node->og_groups, $node->og_initial_groups);
           $removed_gid = array_diff($node->og_initial_groups, $node->og_groups);
           foreach ($updated_gid as $gid) {
-            og_statistics_update_last_node($node->changed, $gid);
+            og_statistics_update_last_node($node, $gid);
           }
           foreach ($added_gid as $gid) {
             og_statistics_add_node($gid);
-            og_statistics_update_last_node($node->changed, $gid);
+            og_statistics_update_last_node($node, $gid);
           }
           foreach ($removed_gid as $gid) {
             og_statistics_remove_node($gid);
@@ -110,7 +110,7 @@ function og_statistics_comment(&$a1, $op) {
       if (og_is_group_post_type($node->type)) {
         foreach ($node->og_groups as $gid) {
           og_statistics_add_comment($gid);
-          og_statistics_update_last_comment($a1['timestamp'], $gid);
+          og_statistics_update_last_comment($a1, $gid);
         }
       }
       break;
@@ -126,7 +126,7 @@ function og_statistics_comment(&$a1, $op) {
       $node = node_load($a1['nid']);
       if (og_is_group_post_type($node->type)) {
         foreach ($node->og_groups as $gid) {
-          og_statistics_update_last_comment($a1['timestamp'], $gid);
+          og_statistics_update_last_comment($a1, $gid);
         }
       }
       break;
@@ -141,7 +141,7 @@ function og_statistics_og($op, $gid, $uid, $args) {
     case 'user insert':
       $time = time();
       og_statistics_add_user($gid);
-      og_statistics_update_last_member($time, $gid);
+      og_statistics_update_last_member($time, $uid, $gid);
       break;
     case 'user delete':
       og_statistics_remove_user($gid);
@@ -180,6 +180,12 @@ function og_statistics_write_pure_record($gid) {
     'last_node_timestamp' => 0,
     'last_comment_timestamp' => 0,
     'last_member_timestamp' => 0,
+    'last_node_nid' => 0,
+    'last_node_uid' => 0,
+    'last_comment_cid' => 0,
+    'last_comment_nid' => 0,
+    'last_comment_uid' => 0,
+    'last_member_uid' => 0,
   );
   drupal_write_record('og_statistics', $stat);
 }
@@ -215,12 +221,16 @@ function og_statistics_remove_node($gid) {
 /**
  * Updates the last node of a group.
  *
+ * @param $node
+ *   A node object.
  * @param $gid
  *   The group nid.
  */
-function og_statistics_update_last_node($timestamp, $gid) {
+function og_statistics_update_last_node($node, $gid) {
   $stat = og_statistics_load($gid);
-  $stat['last_node_timestamp'] = $timestamp;
+  $stat['last_node_timestamp'] = $node->changed;
+  $stat['last_node_uid'] = $node->uid;
+  $stat['last_node_nid'] = $node->nid;
   drupal_write_record('og_statistics', $stat, 'nid');
 }
 
@@ -251,12 +261,17 @@ function og_statistics_remove_comment($gid) {
 /**
  * Updates the last comment of a group.
  *
+ * @param $comment
+ *   A comment array.
  * @param $gid
  *   The group nid.
  */
-function og_statistics_update_last_comment($timestamp, $gid) {
+function og_statistics_update_last_comment($comment, $gid) {
   $stat = og_statistics_load($gid);
-  $stat['last_comment_timestamp'] = $timestamp;
+  $stat['last_comment_timestamp'] = $comment['timestamp'];
+  $stat['last_comment_uid'] = $comment['uid'];
+  $stat['last_comment_nid'] = $comment['nid'];
+  $stat['last_comment_cid'] = $comment['cid'];
   drupal_write_record('og_statistics', $stat, 'nid');
 }
 
@@ -289,10 +304,13 @@ function og_statistics_remove_user($gid) {
  *
  * @param $gid
  *   The group nid.
+ * @param $uid
+ *   The uid of the latest member.
  */
-function og_statistics_update_last_member($timestamp, $gid) {
+function og_statistics_update_last_member($timestamp, $uid, $gid) {
   $stat = og_statistics_load($gid);
   $stat['last_member_timestamp'] = $timestamp;
+  $stat['last_member_uid'] = $uid;
   drupal_write_record('og_statistics', $stat, 'nid');
 }
 

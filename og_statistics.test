@@ -82,6 +82,8 @@ class OgStatisticsTestCase extends OgTestCase {
 
     $this->assertTrue($count_one_up, 'A node post in a group, counts the counter 1 up');
     $this->assertEqual($node->created, $after['last_node_timestamp'], 'A node post in a group, sets the last node timestamp');
+    $this->assertEqual($node->nid, $after['last_node_nid'], 'A node post in a group sets the last node nid');
+    $this->assertEqual($node->uid, $after['last_node_uid'], 'A node post in a group sets the last node uid');
 
     // remove the post
     node_delete($nid);
@@ -124,6 +126,9 @@ class OgStatisticsTestCase extends OgTestCase {
     $count_up = ($after['comments_count'] - $before['comments_count']) == 1;
     $this->assertTrue($count_up, 'new comment to one group post, counts up the comment counter');
     $this->assertEqual($comment->timestamp, $after['last_comment_timestamp'], 'new comment to one group post, counts up the comment counter');
+    $this->assertEqual($comment->cid, $after['last_comment_cid'], 'New comment to one group post sets the last comment cid.');
+    $this->assertEqual($comment->nid, $after['last_comment_nid'], 'New comment to one group post sets the last comment nid.');
+    $this->assertEqual($comment->uid, $after['last_comment_uid'], 'New comment to one group post sets the last comment uid.');
   }
 
   function TestOgStatisticsOg() {
@@ -153,6 +158,7 @@ class OgStatisticsTestCase extends OgTestCase {
 
     $this->assertTrue($count_up, 'New subscription to a group adds the counter 1 up');
     $this->assertEqual($time, $after['last_member_timestamp'], 'New subscription to a group adds the counter 1 up');
+    $this->assertEqual($account->uid, $after['last_member_uid'], 'New subscription to a group sets the last member uid.');
   }
 }
 
