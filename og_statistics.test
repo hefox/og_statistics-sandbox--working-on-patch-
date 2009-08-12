@@ -11,7 +11,7 @@
 require_once drupal_get_path('module', 'og') .'/tests/og_testcase.php';
 
 class OgStatisticsTestCase extends OgTestCase {
-  function getInfo() {
+  public static function getInfo() {
     return array(
       'name' => t('Organic groups statistics'),
       'description' => t('tests statistics of og_statistics module'),
