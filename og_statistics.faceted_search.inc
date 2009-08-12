@@ -4,6 +4,9 @@
 /**
  * @file
  *   Integration of og_statistics into faceted_search.
+ *
+ * @TODO
+ *   Add every statistic field for the sort availible.
  */
 
 /**
