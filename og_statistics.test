@@ -20,7 +20,7 @@ class OgStatisticsTestCase extends OgTestCase {
   }
 
   function setUp() {
-    parent::setUp('node', 'user', 'comment', 'views', 'og', 'og_views', 'og_statistics', 'og_access');
+    parent::setUp('node', 'user', 'comment', 'views', 'og', 'og_views', 'og_statistics', 'og_access', 'devel');
 
     // Create a user with admin permissions.
     $web_admin = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'access administration pages', 'administer site configuration', 'administer organic groups'));
@@ -159,6 +159,31 @@ class OgStatisticsTestCase extends OgTestCase {
     $this->assertTrue($count_up, 'New subscription to a group adds the counter 1 up');
     $this->assertEqual($time, $after['last_member_timestamp'], 'New subscription to a group adds the counter 1 up');
     $this->assertEqual($account->uid, $after['last_member_uid'], 'New subscription to a group sets the last member uid.');
+  }
+
+  function TestOgStatisticsDelete() {
+    // Create a group node content type.
+    $og_group_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
+
+    // Create a group post content type.
+    $og_post_type = $this->drupalCreateContentType();
+    variable_set('og_content_type_usage_'. $og_post_type->name, 'group_post_standard');
+
+    // Rebuild the menu so the new content types will appear in the menu.
+    menu_rebuild();
+
+    $gid = $this->addOgGroup($og_group_type->name);
+    // create a test group
+    $gid = $this->addOgGroup($og_group_type->name);
+    $before = og_statistics_load($gid);
+
+    // Delete the node, the stat-record should be deleted too.
+    $node = node_load($gid);
+    node_delete($node->nid);
+    $after = og_statistics_load($gid);
+
+    $this->assertTrue(empty($after), 'Og statistics record get deleted');
   }
 }
 
