@@ -325,6 +325,50 @@ function og_statistics_delete_record($gid) {
 }
 
 /**
+ * Recalcs mulitple records.
+ *
+ * @param $nids
+ *  A list of nids to recalc the records.
+ */
+function og_statistcs_recalc($nids = array()) {
+  foreach ($nids as $nid) {
+    // All statistics are set to zero.
+    $stat = array(
+      'nid' => $nid,
+      'members_count' => 0,
+      'posts_count' => 0,
+      'comments_count' => 0,
+      'last_node_timestamp' => 0,
+      'last_comment_timestamp' => 0,
+      'last_member_timestamp' => 0,
+      'last_node_nid' => 0,
+      'last_node_uid' => 0,
+      'last_comment_cid' => 0,
+      'last_comment_nid' => 0,
+      'last_comment_uid' => 0,
+      'last_member_uid' => 0,
+    );
+    $stat['members_count'] = db_result(db_query("SELECT COUNT(uid) FROM {og_uid} WHERE nid = %d", $nid));
+    $stat['posts_count'] = db_result(db_query("SELECT COUNT(nid) FROM {og_ancestry} WHERE group_nid = %d", $nid));
+    $stat['comments_count'] = db_result(db_query("SELECT COUNT(c.cid) FROM {comments} c
+      INNER JOIN {og_ancestry} oa ON oa.nid = c.nid WHERE oa.group_nid = %d", $nid));
+    $stat = array_merge($stat, db_fetch_array(db_query_range("SELECT n.uid AS last_node_uid, n.nid AS last_node_nid, n.created AS last_node_timestamp FROM {node} n
+      INNER JOIN {og_ancestry} oa ON oa.nid = n.nid WHERE oa.group_nid = %d ORDER BY n.created DESC", $nid, 0, 1)));
+    $stat = array_merge($stat, db_fetch_array(db_query_range("SELECT c.nid AS last_comment_nid, c.uid AS last_comment_uid, c.cid AS last_comment_cid, c.timestamp AS last_comment_timestamp FROM {comments} c
+      INNER JOIN {og_ancestry} oa ON oa.nid = c.nid WHERE group_nid = %d ORDER BY c.timestamp DESC
+      ", $nid, 0, 1)));
+    $stat = array_merge($stat, db_fetch_array(db_query_range("SELECT created AS last_member_timestamp, uid AS last_member_uid FROM {og_uid}
+      WHERE nid = %d ORDER BY created DESC", $nid, 0, 1)));
+    if (og_statistics_load($nid)) {
+      drupal_write_record('og_statistics', $stat, 'nid');
+    }
+    else {
+      drupal_write_record('og_statistics', $stat);
+    }
+  }
+}
+
+/**
  * views stuff.
  */
 
