@@ -17,6 +17,23 @@
  */
 
 /**
+ * Implementation of hook_menu().
+ */
+function og_statistics_menu() {
+  $items = array();
+  $items['admin/settings/og_statistics'] = array(
+    'title' => 'Og Statistics settings',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('og_statistics_settings'),
+    'access arguments' => array('administer organic groups'),
+    'file' => 'og_statistics.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
  * Central og_statistics api function.
  *
  * This function is not used yet.
@@ -352,13 +369,21 @@ function og_statistcs_recalc($nids = array()) {
     $stat['posts_count'] = db_result(db_query("SELECT COUNT(nid) FROM {og_ancestry} WHERE group_nid = %d", $nid));
     $stat['comments_count'] = db_result(db_query("SELECT COUNT(c.cid) FROM {comments} c
       INNER JOIN {og_ancestry} oa ON oa.nid = c.nid WHERE oa.group_nid = %d", $nid));
-    $stat = array_merge($stat, db_fetch_array(db_query_range("SELECT n.uid AS last_node_uid, n.nid AS last_node_nid, n.created AS last_node_timestamp FROM {node} n
-      INNER JOIN {og_ancestry} oa ON oa.nid = n.nid WHERE oa.group_nid = %d ORDER BY n.created DESC", $nid, 0, 1)));
-    $stat = array_merge($stat, db_fetch_array(db_query_range("SELECT c.nid AS last_comment_nid, c.uid AS last_comment_uid, c.cid AS last_comment_cid, c.timestamp AS last_comment_timestamp FROM {comments} c
+
+    $array = db_fetch_array(db_query_range("SELECT n.uid AS last_node_uid, n.nid AS last_node_nid, n.created AS last_node_timestamp FROM {node} n
+      INNER JOIN {og_ancestry} oa ON oa.nid = n.nid WHERE oa.group_nid = %d ORDER BY n.created DESC", $nid, 0, 1));
+    $array = $array ? $array : array();
+    $stat = array_merge($stat, $array);
+    $array = db_fetch_array(db_query_range("SELECT c.nid AS last_comment_nid, c.uid AS last_comment_uid, c.cid AS last_comment_cid, c.timestamp AS last_comment_timestamp FROM {comments} c
       INNER JOIN {og_ancestry} oa ON oa.nid = c.nid WHERE group_nid = %d ORDER BY c.timestamp DESC
-      ", $nid, 0, 1)));
-    $stat = array_merge($stat, db_fetch_array(db_query_range("SELECT created AS last_member_timestamp, uid AS last_member_uid FROM {og_uid}
-      WHERE nid = %d ORDER BY created DESC", $nid, 0, 1)));
+      ", $nid, 0, 1));
+    $array = $array ? $array : array();
+    $stat = array_merge($stat, $array);
+    $array = db_fetch_array(db_query_range("SELECT created AS last_member_timestamp, uid AS last_member_uid FROM {og_uid}
+      WHERE nid = %d ORDER BY created DESC", $nid, 0, 1));
+    $array = $array ? $array : array();
+    $stat = array_merge($stat, $array);
+
     if (og_statistics_load($nid)) {
       drupal_write_record('og_statistics', $stat, 'nid');
     }
@@ -367,6 +392,11 @@ function og_statistcs_recalc($nids = array()) {
     }
   }
 }
+
+function og_statistcs_settings_finished() {
+  drupal_set_message('Statistics rebuilded successfull');
+}
+
 
 /**
  * views stuff.
