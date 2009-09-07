@@ -48,7 +48,6 @@ class OgStatisticsTestCase extends OgTestCase {
     $members = 
 
     $empty = FALSE;
-    $this->assertFalse($empty, print_r($stat, TRUE));
     foreach ($stat as $key => $item) {
       $empty = $empty || $item == TRUE;
     }
@@ -94,8 +93,15 @@ class OgStatisticsTestCase extends OgTestCase {
     $this->assertTrue($count_down, 'A node poast in a group was deleted, counts the counter 1 down');
   }
 
+  function drupalCreateComment($edit) {
+    if ($cid = comment_save($edit)) {
+      return $cid;
+    }
+  }
+
   // Tests comments hooks statistic
   function TestOgStatisticsComment() {
+    global $user;
     // Create a group node content type.
     $og_group_type = $this->drupalCreateContentType();
     variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
@@ -113,13 +119,19 @@ class OgStatisticsTestCase extends OgTestCase {
 
     // add a test post
     $nids[] = $nid = $this->addOgPost($og_post_type->name, array($gid));
+    $node = node_load($nid);
 
     // adds some comments
     $edit = array();
     $edit['subject'] = $this->randomName(10);
     $edit['comment'] = $this->randomName(50);
     $edit['nid'] = $nid;
-    $cid = comment_save($edit);
+    $edit['format'] = FILTER_FORMAT_DEFAULT;
+    $edit['node'] = $node;
+    $edit['uid'] = $user->uid;
+    $edit['pid'] = NULL;
+    $edit['cid'] = NULL;
+    $cid = $this->drupalCreateComment($edit);
     $comment = _comment_load($cid);
 
     $after = og_statistics_load($gid);
@@ -129,6 +141,27 @@ class OgStatisticsTestCase extends OgTestCase {
     $this->assertEqual($comment->cid, $after['last_comment_cid'], 'New comment to one group post sets the last comment cid.');
     $this->assertEqual($comment->nid, $after['last_comment_nid'], 'New comment to one group post sets the last comment nid.');
     $this->assertEqual($comment->uid, $after['last_comment_uid'], 'New comment to one group post sets the last comment uid.');
+
+    // add another comment.
+
+    $edit = array();
+    $edit['subject'] = $this->randomName(10);
+    $edit['comment'] = $this->randomName(50);
+    $edit['nid'] = $nid;
+    $edit['format'] = FILTER_FORMAT_DEFAULT;
+    $edit['node'] = $node;
+    $edit['uid'] = $user->uid;
+    $edit['pid'] = NULL;
+    $edit['cid'] = NULL;
+    $cid = $this->drupalCreateComment($edit);
+
+    // Remove the node and check whether comment count is updated
+    // reload the node, to update the stats.
+    $node = node_load($node, NULL, TRUE);
+
+    node_delete($nid);
+    $stat = og_statistics_load($gid);
+    $this->assertEqual($stat['comments_count'], 0, 'all comments were deleted');
   }
 
   function TestOgStatisticsOg() {

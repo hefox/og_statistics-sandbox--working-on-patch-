@@ -90,7 +90,7 @@ function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
         if (isset($node->og_groups)) {
           $node->og_groups = array_unique($node->og_groups);
           foreach ($node->og_groups as $gid) {
-            og_statistics_remove_node($gid);
+            og_statistics_remove_node($node->nid, $gid);
           }
         }
       }
@@ -110,7 +110,7 @@ function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
             og_statistics_update_last_node($node, $gid);
           }
           foreach ($removed_gid as $gid) {
-            og_statistics_remove_node($gid);
+            og_statistics_remove_node($node->nid, $gid);
           }
         }
       }
@@ -225,11 +225,11 @@ function og_statistics_add_node($gid) {
  * @param $gid
  *   The group nid.
  */
-function og_statistics_remove_node($gid) {
+function og_statistics_remove_node($nid, $gid) {
   $stat = og_statistics_load($gid);
   $stat['posts_count']--;
   // Load the count of comments and remove this amount of comments.
-  $node = node_load($gid);
+  $node = node_load($nid);
   $stat['comments_count'] -= $node->comment_count;
 
   drupal_write_record('og_statistics', $stat, 'nid');
