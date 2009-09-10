@@ -61,7 +61,7 @@ function og_statistics_views_og_statistics() {
     'title' => t('Group Statistic: Last inserted/updated Node-time'),
     'real field' => 'last_node_timestamp',
     'field' => array(
-      'handler' => 'views_handler_field_numeric',
+      'handler' => 'views_handler_field_date',
       'click sortable' => TRUE,
     ),
     'sort' => array(
@@ -72,7 +72,7 @@ function og_statistics_views_og_statistics() {
     'title' => t('Group Statistic: Last Comment-time'),
     'real field' => 'last_comment_timestamp',
     'field' => array(
-      'handler' => 'views_handler_field_numeric',
+      'handler' => 'views_handler_field_date',
       'click sortable' => TRUE,
     ),
     'sort' => array(
@@ -83,7 +83,7 @@ function og_statistics_views_og_statistics() {
     'title' => t('Group Statistic: last Member subscription'),
     'real field' => 'last_member_timestamp',
     'field' => array(
-      'handler' => 'views_handler_field_numeric',
+      'handler' => 'views_handler_field_date',
       'click sortable' => TRUE,
     ),
     'sort' => array(
@@ -159,7 +159,7 @@ function og_statistics_views_og_statistics() {
       'label' => t('user'),
     ),
   );
-  
+
   return $data;
 }
 
