@@ -148,4 +148,6 @@ function og_statistics_update_6001() {
   }
   // Rebuild schema.
   drupal_get_schema('og_statistics', TRUE);
+
+  return $ret;
 }
