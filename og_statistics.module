@@ -56,7 +56,13 @@ function og_statistics_menu() {
 function og_statistics_update_statistic($gid, $key, $method = 'set', $value) {
   $stat = og_statistics_load($gid);
   $stat[$key] = $method == 'set' ? $value : $stat[$key] + $value;
-  return drupal_write_record('og_statistics', $stat, 'nid');
+  // Update if a stat could be found
+  if (isset($stat['nid']) && $stat['nid']) {
+    return drupal_write_record('og_statistics', $stat, 'nid');
+  }
+  else {
+    return og_statistics_write_pure_record($gid);
+  }
 }
 
 /**
@@ -204,7 +210,7 @@ function og_statistics_write_pure_record($gid) {
     'last_comment_uid' => 0,
     'last_member_uid' => 0,
   );
-  drupal_write_record('og_statistics', $stat);
+  return drupal_write_record('og_statistics', $stat);
 }
 
 /**
@@ -216,7 +222,7 @@ function og_statistics_write_pure_record($gid) {
 function og_statistics_add_node($gid) {
   $stat = og_statistics_load($gid);
   $stat['posts_count']++;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -232,7 +238,7 @@ function og_statistics_remove_node($nid, $gid) {
   $node = node_load($nid);
   $stat['comments_count'] -= $node->comment_count;
 
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -248,7 +254,7 @@ function og_statistics_update_last_node($node, $gid) {
   $stat['last_node_timestamp'] = $node->changed;
   $stat['last_node_uid'] = $node->uid;
   $stat['last_node_nid'] = $node->nid;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -260,7 +266,7 @@ function og_statistics_update_last_node($node, $gid) {
 function og_statistics_add_comment($gid) {
   $stat = og_statistics_load($gid);
   $stat['comments_count']++;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -272,7 +278,7 @@ function og_statistics_add_comment($gid) {
 function og_statistics_remove_comment($gid) {
   $stat = og_statistics_load($gid);
   $stat['comments_count']--;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -289,7 +295,7 @@ function og_statistics_update_last_comment($comment, $gid) {
   $stat['last_comment_uid'] = $comment['uid'];
   $stat['last_comment_nid'] = $comment['nid'];
   $stat['last_comment_cid'] = $comment['cid'];
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -301,7 +307,7 @@ function og_statistics_update_last_comment($comment, $gid) {
 function og_statistics_add_user($gid) {
   $stat = og_statistics_load($gid);
   $stat['members_count']++;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -313,7 +319,7 @@ function og_statistics_add_user($gid) {
 function og_statistics_remove_user($gid) {
   $stat = og_statistics_load($gid);
   $stat['members_count']--;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -328,7 +334,7 @@ function og_statistics_update_last_member($timestamp, $uid, $gid) {
   $stat = og_statistics_load($gid);
   $stat['last_member_timestamp'] = $timestamp;
   $stat['last_member_uid'] = $uid;
-  drupal_write_record('og_statistics', $stat, 'nid');
+  return drupal_write_record('og_statistics', $stat, 'nid');
 }
 
 /**
@@ -385,10 +391,10 @@ function og_statistcs_recalc($nids = array()) {
     $stat = array_merge($stat, $array);
 
     if (og_statistics_load($nid)) {
-      drupal_write_record('og_statistics', $stat, 'nid');
+      return drupal_write_record('og_statistics', $stat, 'nid');
     }
     else {
-      drupal_write_record('og_statistics', $stat);
+      return drupal_write_record('og_statistics', $stat);
     }
   }
 }
