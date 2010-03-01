@@ -104,7 +104,7 @@ function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
     case 'update':
       // Update statistics.
       if (og_is_group_post_type($node->type)) {
-        if (isset($node->og_groups)) {
+        if (isset($node->og_groups) && isset($node->og_initial_groups)) {
           $updated_gid = array_intersect($node->og_groups, $node->og_initial_groups);
           $added_gid = array_diff($node->og_groups, $node->og_initial_groups);
           $removed_gid = array_diff($node->og_initial_groups, $node->og_groups);
