@@ -120,6 +120,12 @@ function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
           }
         }
       }
+      break;
+    case 'load' :
+      if (og_is_group_type($node->type)) {
+        $node->og_statistics = og_statistics_load($node->nid);
+      }
+      break;
   }
 }
 
