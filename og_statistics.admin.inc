@@ -6,6 +6,11 @@
  */
 
 function og_statistics_settings() {
+  $form['include_unapproved_members'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include unapproved members in membership count'),
+    '#default_value' => variable_get('og_statistics_include_unapproved_members', TRUE),
+  );
   $form['rebuild'] = array(
     '#type' => 'submit',
     '#value' => t('Rebuild og_statistics')
@@ -15,6 +20,8 @@ function og_statistics_settings() {
 }
 
 function og_statistics_settings_submit(&$form, &$form_state) {
+  variable_set('og_statistics_include_unapproved_members', $form_state['values']['include_unapproved_members']);
+
   // get all group nodes
   $types = og_get_types('group');
   $placeholders = db_placeholders($types, 'varchar');

@@ -168,12 +168,27 @@ function og_statistics_comment(&$a1, $op) {
 function og_statistics_og($op, $gid, $uid, $args) {
   switch ($op) {
     case 'user insert':
-      $time = time();
-      og_statistics_add_user($gid);
-      og_statistics_update_last_member($time, $uid, $gid);
+      $node = node_load($gid);
+      // If not a moderated group, update the membership count,
+      // or if it is a moderated group and unapproved users are to be counted,
+      // then update the statistics.
+      if ($node->og_selective != 1 || ($node->og_selective == 1 && variable_get('og_statistics_include_unapproved_members', TRUE))) {
+        $time = time();
+        og_statistics_add_user($gid);
+        og_statistics_update_last_member($time, $uid, $gid);
+      }
       break;
     case 'user delete':
       og_statistics_remove_user($gid);
+      break;
+    case 'user approve':
+      // If not counting unapproved users, add them to the stats when their
+      // membership is approved.
+      if (!variable_get('og_statistics_include_unapproved_members', TRUE)) {
+        $time = time();
+        og_statistics_add_user($gid);
+        og_statistics_update_last_member($time, $uid, $gid);
+      }
       break;
   }
 }
@@ -377,7 +392,12 @@ function og_statistcs_recalc($nids = array()) {
       'last_comment_uid' => 0,
       'last_member_uid' => 0,
     );
-    $stat['members_count'] = db_result(db_query("SELECT COUNT(uid) FROM {og_uid} WHERE nid = %d", $nid));
+    if (variable_get('og_statistics_include_unapproved_members', TRUE)) {
+      $stat['members_count'] = db_result(db_query("SELECT COUNT(uid) FROM {og_uid} WHERE nid = %d", $nid));
+    }
+    else {
+      $stat['members_count'] = db_result(db_query("SELECT COUNT(uid) FROM {og_uid} WHERE nid = %d AND is_active = 1", $nid));
+    }
     $stat['posts_count'] = db_result(db_query("SELECT COUNT(nid) FROM {og_ancestry} WHERE group_nid = %d", $nid));
     $stat['comments_count'] = db_result(db_query("SELECT COUNT(c.cid) FROM {comments} c
       INNER JOIN {og_ancestry} oa ON oa.nid = c.nid WHERE oa.group_nid = %d", $nid));
