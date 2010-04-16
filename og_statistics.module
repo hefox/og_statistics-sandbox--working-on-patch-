@@ -417,10 +417,10 @@ function og_statistcs_recalc($nids = array()) {
     $stat = array_merge($stat, $array);
 
     if (og_statistics_load($nid)) {
-      return drupal_write_record('og_statistics', $stat, 'nid');
+      drupal_write_record('og_statistics', $stat, 'nid');
     }
     else {
-      return drupal_write_record('og_statistics', $stat);
+      drupal_write_record('og_statistics', $stat);
     }
   }
 }
