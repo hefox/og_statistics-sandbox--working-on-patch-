@@ -27,7 +27,6 @@ function og_statistics_form_faceted_search_edit_form_alter(&$form, &$form_state)
     '#weight' => -1,
   );
 }
-}
 
 /**
  * Implementation of hook_faceted_search_query_alter().
