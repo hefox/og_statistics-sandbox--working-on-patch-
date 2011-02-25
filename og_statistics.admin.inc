@@ -1,5 +1,4 @@
 <?php
-// $Id$
 /**
  * @file
  *   Admin settings for og_statistics module.
