@@ -2,4 +2,5 @@ Drupal 6.x-dev
 o #610930 by DeFr: Check for isset initial groups
 o #639156 by ziobudda: Statistics in group
 o #497232 by hongpong: README.txt with help for Views and config setup
+o #1089908 by hongpong: Fix two typos in the rebuild functionality.
 

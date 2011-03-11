@@ -424,8 +424,8 @@ function og_statistcs_recalc($nids = array()) {
   }
 }
 
-function og_statistcs_settings_finished() {
-  drupal_set_message('Statistics rebuilded successfull');
+function og_statistics_settings_finished() {
+  drupal_set_message('Statistics rebuild successful');
 }
 
 

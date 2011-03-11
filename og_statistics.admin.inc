@@ -33,18 +33,18 @@ function og_statistics_settings_submit(&$form, &$form_state) {
     $counter ++;
     $array[] = $nid;
     if (($counter % 20) == 1) {
-      $operations[] = array('og_statistcs_recalc', array($array));
+      $operations[] = array('og_statistics_recalc', array($array));
       $array = array();
     }
   }
-  $operations[] = array('og_statistcs_recalc', array($array));
+  $operations[] = array('og_statistics_recalc', array($array));
   // Execute the batch progress
   $batch = array(
     'operations' => $operations,
     'title' => 'Generating statistics',
     'init_message' => 'Loading group nodes',
     'error_message' => 'An unrecoverable error has occurred. You can find the error message below. It is advised to copy it to the clipboard for reference.',
-    'finished' => 'og_statistcs_settings_finished',
+    'finished' => 'og_statistics_settings_finished',
   );
   batch_set($batch);
   batch_process('admin/settings/og_statistics');
