@@ -37,8 +37,6 @@ function og_statistics_settings() {
 }
 
 function og_statistics_settings_submit(&$form, &$form_state) {
-  variable_set('og_statistics_include_unapproved_members', $form_state['values']['include_unapproved_members']);
-
   // get all group nodes
   $types = og_get_types('group');
   $placeholders = db_placeholders($types, 'varchar');
