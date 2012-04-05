@@ -29,14 +29,14 @@ function og_statistics_settings() {
     '#value' => t('Rebuild og_statistics'),
     '#submit' => array(
       'system_settings_form_submit',
-      'og_statistics_settings_submit'
+      'og_statistics_settings_rebuild_submit'
     ),
   );
 
   return system_settings_form($form);
 }
 
-function og_statistics_settings_submit(&$form, &$form_state) {
+function og_statistics_settings_rebuild_submit(&$form, &$form_state) {
   // get all group nodes
   $types = og_get_types('group');
   $placeholders = db_placeholders($types, 'varchar');
