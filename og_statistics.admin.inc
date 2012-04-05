@@ -5,17 +5,35 @@
  */
 
 function og_statistics_settings() {
-  $form['include_unapproved_members'] = array(
+
+  $form['og_statistics_include_unapproved_members'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Include unapproved members in membership count'),
+    '#title' => t('Include unapproved members in membership stats'),
     '#default_value' => variable_get('og_statistics_include_unapproved_members', TRUE),
   );
-  $form['rebuild'] = array(
-    '#type' => 'submit',
-    '#value' => t('Rebuild og_statistics')
+
+  $form['og_statistics_include_unpublished_nodes'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include unpublished nodes in node stats'),
+    '#default_value' => variable_get('og_statistics_include_unpublished_nodes', TRUE),
   );
 
-  return $form;
+  $form['og_statistics_include_unpublished_comments'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include unpublished comments in comment stats'),
+    '#default_value' => variable_get('og_statistics_include_unpublished_comments', TRUE),
+  );
+
+  $form['rebuild'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rebuild og_statistics'),
+    '#submit' => array(
+      'system_settings_form_submit',
+      'og_statistics_settings_submit'
+    ),
+  );
+
+  return system_settings_form($form);
 }
 
 function og_statistics_settings_submit(&$form, &$form_state) {
