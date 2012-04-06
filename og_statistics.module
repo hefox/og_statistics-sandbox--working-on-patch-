@@ -37,12 +37,14 @@ function og_statistics_menu() {
  */
 function og_statistics_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   if (in_array($op, array('insert', 'delete', 'update')) && og_is_group_post_type($node->type) && isset($node->og_groups)) {
+    // Delete removes comments without comment delete hook so need to handle it.
+    $update = $op == 'delete' ? array('node', 'comment') : array('node');
     foreach ($node->og_groups as $gid) {
-      og_statistics_update_group($gid, 'node');
+      og_statistics_update_group($gid, $update);
     }
   }
   elseif ($op == 'insert' && og_is_group_type($node->type)) {
-    og_statistics_update_group($node->nid, 'none');
+    og_statistics_update_group($node->nid, array('none'));
   }
   elseif ($op == 'delete' && og_is_group_type($node->type)) {
     og_statistics_delete_record($node->nid);
@@ -63,7 +65,7 @@ function og_statistics_comment(&$a1, $op) {
       $node = node_load($a1['nid']);
       if (og_is_group_post_type($node->type)) {
         foreach ($node->og_groups as $gid) {
-          og_statistics_update_group($gid, 'comment');
+          og_statistics_update_group($gid, array('comment'));
         }
       }
       break;
@@ -78,7 +80,7 @@ function og_statistics_og($op, $gid, $uid, $args) {
     case 'user insert':
     case 'user delete':
     case 'user approve':
-      og_statistics_update_group($gid, 'member');
+      og_statistics_update_group($gid, array('member'));
       break;
   }
 }
@@ -126,10 +128,10 @@ function og_statistics_recalc($nids = array()) {
  *
  * @param $gid
  *   A group NID.
- * @param $recal
- *   What information to update (all, member, node, comment, 'none').
+ * @param $limit_update
+ *   If set, limits recalculations (member, node, comment, 'none').
  */
-function og_statistics_update_group($gid, $recal = 'all') {
+function og_statistics_update_group($gid, $limit_update = array()) {
   $original_stats = og_statistics_load($gid);
   $stat = $original_stats + array(
     'nid' => $gid,
@@ -147,17 +149,17 @@ function og_statistics_update_group($gid, $recal = 'all') {
     'last_member_uid' => 0,
   );
 
-  if ($recal == 'all' || $recal == 'node') {
+  if (empty($limit_update) || in_array('node', $limit_update)) {
     $stat = og_statistics_group_calc_last_node_stats($gid) + $stat;
     $stat['posts_count'] = og_statistics_group_calc_posts_count($gid);
   }
 
-  if ($recal == 'all' || $recal == 'comment') {
+  if (empty($limit_update) || in_array('comment', $limit_update)) {
     $stat = og_statistics_group_calc_last_comment_stats($gid) + $stat;
     $stat['comments_count'] = og_statistics_group_calc_comments_count($gid);
   }
 
-  if ($recal == 'all' || $recal == 'member') {
+  if (empty($limit_update) || in_array('member', $limit_update)) {
     $stat = og_statistics_group_calc_last_member_stats($gid) + $stat;
     $stat['members_count'] = og_statistics_group_calc_members_count($gid);
   }
@@ -250,7 +252,7 @@ function og_statistics_group_calc_last_node_stats($gid) {
   if (!variable_get('og_statistics_include_unpublished_nodes', TRUE)) {
     $query .= ' AND n.status = 1';
   }
-  $query .= ' ORDER BY n.created DESC';
+  $query .= ' ORDER BY n.created DESC, n.nid DESC';
   $stats = db_fetch_array(db_query(db_rewrite_sql($query, 'og_statistics_og_ancestry', 'nid'), $gid));
   return !empty($stats) ? $stats : array('last_node_uid' => 0, 'last_node_timestamp' => 0, 'last_node_nid' => 0);
 }
@@ -268,7 +270,7 @@ function og_statistics_group_calc_last_node_stats($gid) {
 function og_statistics_group_calc_last_comment_stats($gid) {
   $query_base = "SELECT c.nid AS last_comment_nid, c.uid AS last_comment_uid, c.cid AS last_comment_cid, c.timestamp AS last_comment_timestamp"
     . " FROM {comments} c INNER JOIN {og_ancestry} og_statistics_og_ancestry ON og_statistics_og_ancestry.nid = c.nid";
-  $query_where .= " WHERE og_statistics_og_ancestry.group_nid = %d ";
+  $query_where = " WHERE og_statistics_og_ancestry.group_nid = %d ";
   $args = array($gid);
 
   if (!variable_get('og_statistics_include_unpublished_comments', TRUE)) {
@@ -281,7 +283,7 @@ function og_statistics_group_calc_last_comment_stats($gid) {
     $query_where .= ' AND n.status = 1';
   }
 
-  $query .= " ORDER BY c.timestamp DESC";
+  $query_where .= " ORDER BY c.timestamp DESC, c.cid DESC";
   $stats = db_fetch_array(db_query_range(db_rewrite_sql($query_base . $query_where, 'og_statistics_og_ancestry', 'nid'), $args, 0, 1));
   return !empty($stats) ? $stats : array('last_comment_nid' => 0, 'last_comment_uid' => 0, 'last_comment_timestamp' => 0);
 }
@@ -300,7 +302,7 @@ function og_statistics_group_calc_last_member_stats($gid) {
   if (!variable_get('og_statistics_include_unapproved_members', TRUE)) {
     $query .= " AND og_statistics_og_uid.is_active = 1";
   }
-  $query .= ' ORDER BY created DESC';
+  $query .= ' ORDER BY og_statistics_og_uid.created DESC';
   $stats = db_fetch_array(db_query(db_rewrite_sql($query, 'og_statistics_og_uid', 'nid'), $gid));
   return !empty($stats) ? $stats : array('last_member_timestamp' => 0, 'last_member_uid' => 0);
 }

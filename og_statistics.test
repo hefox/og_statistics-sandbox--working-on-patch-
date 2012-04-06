@@ -41,10 +41,11 @@ class OgStatisticsTestCase extends OgTestCase {
 
     // Create a group node.
     $gid = $this->addOgGroup($og_group_type->name);
+    $group = node_load($gid);
 
     // get the record of the group
     $stat = og_statistics_load($gid);
-    $subscription = og_get_subscriptions($user->uid, 1);
+    $subscription = og_get_subscriptions($group->uid, 1, TRUE);
     $defaults =  array(
       'nid' => $gid,
       'members_count' => 1,
@@ -58,10 +59,10 @@ class OgStatisticsTestCase extends OgTestCase {
       'last_comment_cid' => 0,
       'last_comment_nid' => 0,
       'last_comment_uid' => 0,
-      'last_member_uid' => $user->uid,
+      'last_member_uid' => $group->uid,
     );
 
-    $this->assertEqual($defaults, $stat, t('Stats for group post created empty other than member information.') . print_r($defaults, 1) . ' ' . print_r($stat, 1) . print_r($subscription, 1));
+    $this->assertEqual($defaults, $stat, t('Stats for group post created empty other than member information.'));
   }
 
   // Tests nodeapi statistics.
@@ -79,28 +80,61 @@ class OgStatisticsTestCase extends OgTestCase {
 
     // create a test group
     $gid = $this->addOgGroup($og_group_type->name);
-    $before = og_statistics_load($gid);
 
-    // add a test post
-    $nids[] = $nid = $this->addOgPost($og_post_type->name, array($gid));
-    $node = node_load($nid);
-    // Rebuild the menu so the new content types will appear in the menu.
-    menu_rebuild();
-    $after = og_statistics_load($gid);
-    $count_one_up = ($after['posts_count'] - $before['posts_count']) == 1;
+    variable_set('og_statistics_include_unpublished_nodes', TRUE);
+    $this->_TestOgStatisticsNodeapi($gid, $og_post_type);
 
-    $this->assertTrue($count_one_up, 'A node post in a group, counts the counter 1 up');
-    $this->assertEqual($node->created, $after['last_node_timestamp'], 'A node post in a group, sets the last node timestamp');
-    $this->assertEqual($node->nid, $after['last_node_nid'], 'A node post in a group sets the last node nid');
-    $this->assertEqual($node->uid, $after['last_node_uid'], 'A node post in a group sets the last node uid');
+    variable_set('og_statistics_include_unpublished_nodes', FALSE);
+    $this->_TestOgStatisticsNodeapi($gid, $og_post_type);
+  }
 
-    // remove the post
-    node_delete($nid);
-    $before = $after;
-    $after = og_statistics_load($gid);
-    $count_down = ($after['posts_count'] - $before['posts_count']) == -1;
+  function _TestOgStatisticsNodeapi($gid, $og_post_type) {
+    // Make sure stats are updated for any configuration change.
+    og_statistics_update_group($gid);
+    $nids = array();
 
-    $this->assertTrue($count_down, 'A node post in a group was deleted, counts the counter 1 down');
+    $include_unpublished = variable_get('og_statistics_include_unpublished_nodes', TRUE);
+    $text = $include_unpublished ? ' (including unpublished content)' : ' (only published content)';
+    foreach (array(0, 1) as $status) {
+      // Make sure the timing of posts is apart.
+      sleep(1);
+      $before = og_statistics_load($gid);
+      // add a test post
+      $nid = $this->addOgPost($og_post_type->name, array($gid));
+      $node = node_load($nid);
+      // Sure be nice to figure how to do this without second save.
+      if (!$status) {
+        $node->status = 0;
+        node_save($node);
+      }
+
+      $after = og_statistics_load($gid);
+
+      // Only situation that should not effect stats.
+      if (!$include_unpublished && !$status) {
+        $this->assertEqual($before['posts_count'], $after['posts_count'], 'A unpublished node post in a group does not change post count (only published content)');
+        $this->assertEqual($before['last_node_timestamp'], $after['last_node_timestamp'], 'A unpublished node post in a group does not change  last node timestamp (only published content)');
+        $this->assertEqual($before['last_node_nid'], $after['last_node_nid'], 'A unpublished node post in a group does not change last node nid (only published content)');
+        $this->assertEqual($before['last_node_uid'], $after['last_node_uid'], 'A unpublished node post in a group does not change last node uid (only published content)' . $node->status);
+      }
+      else {
+        $node_status = $status ? 'published node' : 'unpublished node';
+        $count_one_up = ($after['posts_count'] - $before['posts_count']) == 1;
+        $this->assertTrue($count_one_up, 'A node post in a group, counts the counter 1 up' . $text);
+        $this->assertEqual($node->created, $after['last_node_timestamp'], 'A ' . $node_status . ' post in a group, sets the last node timestamp' . $text);
+        $this->assertEqual($node->nid, $after['last_node_nid'], 'A ' . $node_status . ' post in a group sets the last node nid' . $text);
+        $this->assertEqual($node->uid, $after['last_node_uid'], 'A ' . $node_status . ' post in a group sets the last node uid' . $text);
+        $nids[$nid] = $node_status;
+      }
+    }
+    foreach ($nids as $nid => $node_status) {
+      $before = og_statistics_load($gid);
+      // Remove the post.
+      node_delete($nid);
+      $after = og_statistics_load($gid);
+      $count_down = ($after['posts_count'] - $before['posts_count']) == -1;
+      $this->assertTrue($count_down, 'A ' . $node_status . ' post in a group was deleted, counts the counter 1 down' . $text);
+    }
   }
 
   function drupalCreateComment($edit) {
@@ -125,53 +159,83 @@ class OgStatisticsTestCase extends OgTestCase {
 
     // create a test group
     $gid = $this->addOgGroup($og_group_type->name);
-    $before = og_statistics_load($gid);
 
     // add a test post
-    $nids[] = $nid = $this->addOgPost($og_post_type->name, array($gid));
+    $nid = $this->addOgPost($og_post_type->name, array($gid));
     $node = node_load($nid);
 
-    // adds some comments
-    $edit = array();
-    $edit['subject'] = $this->randomName(10);
-    $edit['comment'] = $this->randomName(50);
-    $edit['nid'] = $nid;
-    $edit['format'] = FILTER_FORMAT_DEFAULT;
-    $edit['node'] = $node;
-    $edit['uid'] = $user->uid;
-    $edit['pid'] = NULL;
-    $edit['cid'] = NULL;
-    $cid = $this->drupalCreateComment($edit);
-    $comment = _comment_load($cid);
+    variable_set('og_statistics_include_unpublished_comments', TRUE);
+    $this->_TestOgStatisticsComment($gid, $node);
 
-    $after = og_statistics_load($gid);
-    $count_up = ($after['comments_count'] - $before['comments_count']) == 1;
-    $this->assertTrue($count_up, 'new comment to one group post, counts up the comment counter');
-    $this->assertEqual($comment->timestamp, $after['last_comment_timestamp'], 'new comment to one group post, counts up the comment counter');
-    $this->assertEqual($comment->cid, $after['last_comment_cid'], 'New comment to one group post sets the last comment cid.');
-    $this->assertEqual($comment->nid, $after['last_comment_nid'], 'New comment to one group post sets the last comment nid.');
-    $this->assertEqual($comment->uid, $after['last_comment_uid'], 'New comment to one group post sets the last comment uid.');
+    variable_set('og_statistics_include_unpublished_comments', FALSE);
+    $this->_TestOgStatisticsComment($gid, $node);
 
-    // add another comment.
+    variable_set('og_statistics_include_unpublished_nodes', FALSE);
 
-    $edit = array();
-    $edit['subject'] = $this->randomName(10);
-    $edit['comment'] = $this->randomName(50);
-    $edit['nid'] = $nid;
-    $edit['format'] = FILTER_FORMAT_DEFAULT;
-    $edit['node'] = $node;
-    $edit['uid'] = $user->uid;
-    $edit['pid'] = NULL;
-    $edit['cid'] = NULL;
-    $cid = $this->drupalCreateComment($edit);
+    $node->status = 0;
+    node_save($node);
+    $this->_TestOgStatisticsComment($gid, $node);
 
-    // Remove the node and check whether comment count is updated
-    // reload the node, to update the stats.
-    $node = node_load($node, NULL, TRUE);
+    $node->status = 0;
+    node_save($node);
+    og_statistics_update_group($gid);
 
+    // Comments are deleted on deletion of node.
     node_delete($nid);
     $stat = og_statistics_load($gid);
-    $this->assertEqual($stat['comments_count'], 0, 'all comments were deleted' . print_r($stat, 1));
+    $this->assertEqual($stat['comments_count'], 0, 'all comments were deleted');
+  }
+
+
+  function _TestOgStatisticsComment($gid, $node) {
+    global $user;
+    // Make sure stats are updated for any configuration change.
+    og_statistics_update_group($gid);
+
+    $include_unpublished = variable_get('og_statistics_include_unpublished_comments', TRUE);
+    $include_unpublished_nodes = variable_get('og_statistics_include_unpublished_nodes', TRUE);
+    $text = $include_unpublished ? 'including unpublished comments' : 'only published comments';
+    $text .= ', ' . ($include_unpublished_nodes ? 'including unpublished nodes' : 'only published nodes');
+    $text = ' (' . $text . ')';
+    foreach (array(COMMENT_PUBLISHED, COMMENT_NOT_PUBLISHED) as $status) {
+      $before = og_statistics_load($gid);
+      // Make sure stats are updated for any configuration change.
+      og_statistics_update_group($gid);
+
+      // adds some comments.
+      $edit = array();
+      $edit['subject'] = $this->randomName(10);
+      $edit['comment'] = $this->randomName(50);
+      $edit['nid'] = $node->nid;
+      $edit['format'] = FILTER_FORMAT_DEFAULT;
+      $edit['node'] = $node;
+      $edit['uid'] = $user->uid;
+      $edit['pid'] = NULL;
+      $edit['cid'] = NULL;
+      $edit['status'] = $status;
+      $cid = $this->drupalCreateComment($edit);
+      $comment = _comment_load($cid);
+      $after = og_statistics_load($gid);
+
+      $node_status = $node->status ? 'published group post' : 'unpublished group post';
+      if ((!$include_unpublished && $status == COMMENT_NOT_PUBLISHED) || (!$include_unpublished_nodes && !$node->status)) {
+        $this->assertEqual($before['comments_count'], $after['comments_count'], 'new unpublished comment to a ' . $node_status . ' does not change comment counter' . $text);
+        $this->assertEqual($before['last_comment_timestamp'], $after['last_comment_timestamp'], 'new unpublished comment to a ' . $node_status . ',does not change comment timestamp' . $text);
+        $this->assertEqual($before['last_comment_cid'], $after['last_comment_cid'], 'New unpublished comment to a ' . $node_status . ' does not change the last comment cid.' . $text);
+        $this->assertEqual($before['last_comment_nid'], $after['last_comment_nid'], 'New unpublished comment to a ' . $node_status . ' does not change comment nid.' . $text);
+        $this->assertEqual($before['last_comment_uid'], $after['last_comment_uid'], 'New unpublished comment to a ' . $node_status . ' does not change comment uid.' . $text);
+      }
+      else {
+        $count_up = ($after['comments_count'] - $before['comments_count']) == 1;
+        $comment_status = $status == COMMENT_PUBLISHED ? 'published comment' : 'published comment';
+
+        $this->assertTrue($count_up, 'new ' . $comment_status . ' to a ' . $node_status . ' counts up the comment counter' . $text);
+        $this->assertEqual($comment->timestamp, $after['last_comment_timestamp'], 'new ' . $comment_status . ' to a ' . $node_status . ' counts up the comment timestamp' . $text);
+        $this->assertEqual($comment->cid, $after['last_comment_cid'], 'New ' . $comment_status . ' to a ' . $node_status . ' sets the last comment cid.' . $text);
+        $this->assertEqual($comment->nid, $after['last_comment_nid'], 'New ' . $comment_status . ' to a ' . $node_status . ' sets the last comment nid.' . $text);
+        $this->assertEqual($comment->uid, $after['last_comment_uid'], 'New ' . $comment_status . ' to a ' . $node_status . ' sets the last comment uid.' . $text);
+      }
+    }
   }
 
   function TestOgStatisticsOg() {
@@ -199,15 +263,17 @@ class OgStatisticsTestCase extends OgTestCase {
   }
 
   function _testOgUserMembership($gid) {
+    static $runs = 0;
     // Make sure stats are updated for any configuration change.
     og_statistics_update_group($gid);
 
     foreach (array(0, 1) as $active_status) {
+      $runs++;
       $before = og_statistics_load($gid);
       // First test for a user that should always effect information.
       $account = $this->drupalCreateUser();
       // Ensuraces that time is different.
-      $time = time() + $active_status;
+      $time = time() + $runs;
       og_save_subscription($gid, $account->uid, array('created' => $time, 'is_active' => $active_status));
       $after = og_statistics_load($gid);
       $include_inactive_members = variable_get('og_statistics_include_unapproved_members', TRUE) ;
@@ -224,7 +290,7 @@ class OgStatisticsTestCase extends OgTestCase {
         $sub_status = $active_status ? 'active member subscription' : 'inactive member subscription';
         $this->assertTrue($count_up, 'New ' . $sub_status . ' to a group adds the counter 1 up' . $text);
         $this->assertEqual($time, $after['last_member_timestamp'], 'New ' . $sub_status . ' to a group adds the counter 1 up' . $text);
-        $this->assertEqual($account->uid, $after['last_member_uid'], 'New ' . $sub_status . ' to a group sets the last member uid.' . $text . $account->uid . ' ' . $after['last_member_uid'] . ' ' . print_r(og_statistics_group_calc_last_member_stats($gid, 1));
+        $this->assertEqual($account->uid, $after['last_member_uid'], 'New ' . $sub_status . ' to a group sets the last member uid.' . $text);
         
       }
     }
