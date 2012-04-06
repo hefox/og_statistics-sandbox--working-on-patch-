@@ -26,7 +26,8 @@ class OgStatisticsTestCase extends OgTestCase {
     $this->drupalLogin($web_admin);
   }
 
-  function TestOgStatisticsWritePureRecord() {
+  function TestOgStatisticsWriteFirstRecord() {
+    global $user;
     // Create a group node content type.
     $og_group_type = $this->drupalCreateContentType();
     variable_set('og_content_type_usage_'. $og_group_type->name, 'group');
@@ -43,14 +44,24 @@ class OgStatisticsTestCase extends OgTestCase {
 
     // get the record of the group
     $stat = og_statistics_load($gid);
-    unset($stat['nid']);
-    $members = 
+    $subscription = og_get_subscriptions($user->uid, 1);
+    $defaults =  array(
+      'nid' => $gid,
+      'members_count' => 1,
+      'posts_count' => 0,
+      'comments_count' => 0,
+      'last_node_timestamp' => 0,
+      'last_comment_timestamp' => 0,
+      'last_member_timestamp' => $subscription[$gid]['created'],
+      'last_node_nid' => 0,
+      'last_node_uid' => 0,
+      'last_comment_cid' => 0,
+      'last_comment_nid' => 0,
+      'last_comment_uid' => 0,
+      'last_member_uid' => $user->uid,
+    );
 
-    $empty = FALSE;
-    foreach ($stat as $key => $item) {
-      $empty = $empty || $item == TRUE;
-    }
-    $this->assertFalse($empty, t('All stats should have 0 as item'));
+    $this->assertEqual($defaults, $stat, t('Stats for group post created empty other than member information.') . print_r($defaults, 1) . ' ' . print_r($stat, 1) . print_r($subscription, 1));
   }
 
   // Tests nodeapi statistics.
@@ -89,7 +100,7 @@ class OgStatisticsTestCase extends OgTestCase {
     $after = og_statistics_load($gid);
     $count_down = ($after['posts_count'] - $before['posts_count']) == -1;
 
-    $this->assertTrue($count_down, 'A node poast in a group was deleted, counts the counter 1 down');
+    $this->assertTrue($count_down, 'A node post in a group was deleted, counts the counter 1 down');
   }
 
   function drupalCreateComment($edit) {
@@ -160,7 +171,7 @@ class OgStatisticsTestCase extends OgTestCase {
 
     node_delete($nid);
     $stat = og_statistics_load($gid);
-    $this->assertEqual($stat['comments_count'], 0, 'all comments were deleted');
+    $this->assertEqual($stat['comments_count'], 0, 'all comments were deleted' . print_r($stat, 1));
   }
 
   function TestOgStatisticsOg() {
@@ -177,20 +188,46 @@ class OgStatisticsTestCase extends OgTestCase {
 
     // create a test group
     $gid = $this->addOgGroup($og_group_type->name);
-    $before = og_statistics_load($gid);
 
-    // let one member choine the group
-    $account = $this->drupalCreateUser();
-    $time = time();
-    og_save_subscription($gid, $account->uid, array('created' => $time));
+    variable_set('og_statistics_include_unapproved_members', TRUE);
+    $this->_testOgUserMembership($gid);
 
-    $after = og_statistics_load($gid);
+    // Test to make sure works when unapproves members
+    variable_set('og_statistics_include_unapproved_members', FALSE);
+    $this->_testOgUserMembership($gid);
 
-    $count_up = ($after['members_count'] - $before['members_count']) == 1;
+  }
 
-    $this->assertTrue($count_up, 'New subscription to a group adds the counter 1 up');
-    $this->assertEqual($time, $after['last_member_timestamp'], 'New subscription to a group adds the counter 1 up');
-    $this->assertEqual($account->uid, $after['last_member_uid'], 'New subscription to a group sets the last member uid.');
+  function _testOgUserMembership($gid) {
+    // Make sure stats are updated for any configuration change.
+    og_statistics_update_group($gid);
+
+    foreach (array(0, 1) as $active_status) {
+      $before = og_statistics_load($gid);
+      // First test for a user that should always effect information.
+      $account = $this->drupalCreateUser();
+      // Ensuraces that time is different.
+      $time = time() + $active_status;
+      og_save_subscription($gid, $account->uid, array('created' => $time, 'is_active' => $active_status));
+      $after = og_statistics_load($gid);
+      $include_inactive_members = variable_get('og_statistics_include_unapproved_members', TRUE) ;
+
+      // This is the only case that it should not effect member stats.
+      if (empty($include_inactive_members) && empty($active_status)) {
+        $this->assertEqual($before['members_count'], $after['members_count'], 'Member count same when inactive member added (only active members).');
+        $this->assertEqual($before['last_member_timestamp'], $after['last_member_timestamp'], 'Member timestamp same when inactive member added (only active members).');
+        $this->assertEqual($before['last_member_uid'], $after['last_member_uid'], 'Member uid same when inactive member added (only active members).');
+      }
+      else {
+        $count_up = ($after['members_count'] - $before['members_count']) == 1;
+        $text = $include_inactive_members ? ' (including inactive members)' : ' (only active members)';
+        $sub_status = $active_status ? 'active member subscription' : 'inactive member subscription';
+        $this->assertTrue($count_up, 'New ' . $sub_status . ' to a group adds the counter 1 up' . $text);
+        $this->assertEqual($time, $after['last_member_timestamp'], 'New ' . $sub_status . ' to a group adds the counter 1 up' . $text);
+        $this->assertEqual($account->uid, $after['last_member_uid'], 'New ' . $sub_status . ' to a group sets the last member uid.' . $text . $account->uid . ' ' . $after['last_member_uid'] . ' ' . print_r(og_statistics_group_calc_last_member_stats($gid, 1));
+        
+      }
+    }
   }
 
   function TestOgStatisticsDelete() {
